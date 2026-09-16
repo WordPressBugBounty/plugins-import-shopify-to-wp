@@ -93,7 +93,7 @@ class Files
         $optionsPrefix = $this->optionsPrefix;
 
         update_option("{$optionsPrefix}last_{$this->type}_file_number", 1);
-        get_option('shopify2wp_current_step', 'upload');
+        update_option('shopify2wp_current_step', 'upload');
     }
 
 }

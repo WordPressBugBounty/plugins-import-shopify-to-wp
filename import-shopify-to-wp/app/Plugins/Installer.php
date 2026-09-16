@@ -44,7 +44,11 @@ class Installer
             $this->success('Invalid slug.');
         }
 
-        $slug = $data['slug'];
+        $slug = is_string($data['slug']) ? sanitize_key($data['slug']) : '';
+
+        if ('' === $slug) {
+            $this->error(__('Invalid plugin slug.', 'import-shopify-to-wp'));
+        }
 
         $plugin = new Plugin($slug);
 
@@ -89,9 +93,15 @@ class Installer
             $this->success('Invalid slugs.');
         }
 
-        $slugs = $data['slugs'];
+        $slugs = array_values(array_filter((array) $data['slugs'], 'is_string'));
 
         foreach ($slugs as $slug) {
+            $slug = sanitize_key($slug);
+
+            if ('' === $slug) {
+                continue;
+            }
+
             $plugin = new Plugin($slug);
 
             $plugin->setIsActiveCallback(PluginCheckCallbacks::getCallback($slug));

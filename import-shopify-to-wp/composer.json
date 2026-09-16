@@ -1,0 +1,23 @@
+{
+    "name": "awesomemotive/shopify-to-wp",
+    "description": "Easily transfer your Shopify Store to WooCommerce",
+    "type": "wordpress-plugin",
+    "license": "GPLv2 or later",
+    "require": {
+        "ext-json": "*"
+    },
+    "require-dev": {
+        "humanmade/coding-standards": "^1.1",
+        "phpcompatibility/phpcompatibility-wp": "^2.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "S2WPImporter\\": "app/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    }
+}

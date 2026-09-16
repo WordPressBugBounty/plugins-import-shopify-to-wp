@@ -32,6 +32,18 @@ class Importer
             $this->error('Failed to verify the nonce.');
         }
 
+        if (!current_user_can('manage_options')) {
+            $this->error(__('You are not allowed to do this.', 'import-shopify-to-wp'));
+        }
+
+        if (!class_exists('WooCommerce')) {
+            $this->error(__('WooCommerce must be installed and active to import.', 'import-shopify-to-wp'));
+        }
+
+        if (!isset($data['item'], $data['type']) || !is_array($data['item']) || !is_string($data['type'])) {
+            $this->error(__('Malformed request.', 'import-shopify-to-wp'));
+        }
+
         $item = $data['item'];
         $type = sanitize_key($data['type']);
 
@@ -41,6 +53,13 @@ class Importer
             $obj = new Product($item, new \WC_Product_Variable());
         }
         else if ($type === 'customers') {
+            if (empty($item['email']) || !is_string($item['email']) || !is_email($item['email'])) {
+                $this->error(__('The customer has no valid email address.', 'import-shopify-to-wp'), [
+                    'errors' => [],
+                    'soft_errors' => [],
+                ]);
+            }
+
             if (email_exists($item['email'])) {
                 $this->error('Email is already registered.', [
                     'errors' => [],
@@ -58,35 +77,51 @@ class Importer
 
         if (null !== $obj) {
             /** @var IRecord $obj */
-            $obj->parse();
-
-            if ($obj->hasErrors()) {
-                $this->error('Failed', [
+            try {
+                $this->process($obj);
+            }
+            catch (\Exception $e) {
+                $this->error($e->getMessage(), [
                     'errors' => $obj->getErrors(),
                     'soft_errors' => $obj->getSoftErrors(),
                 ]);
             }
+        }
+    }
 
-            $obj->beforeSave();
+    /**
+     * Run a record through parse -> beforeSave -> save -> afterSave and send the JSON response.
+     *
+     * @param IRecord $obj
+     */
+    protected function process($obj): void
+    {
+        $obj->parse();
 
-            $objId = $obj->save();
+        if ($obj->hasErrors()) {
+            $this->error('Failed', [
+                'errors' => $obj->getErrors(),
+                'soft_errors' => $obj->getSoftErrors(),
+            ]);
+        }
 
-            if (!empty($objId)) {
-                $obj->afterSave($objId);
+        $obj->beforeSave();
 
-                $this->success('Imported', [
-                    'soft_errors' => $obj->getSoftErrors(),
-                    'new_object_id' => $objId,
-                ]);
-            }
+        $objId = $obj->save();
+
+        if (!empty($objId)) {
+            $obj->afterSave($objId);
+
+            $this->success('Imported', [
+                'soft_errors' => $obj->getSoftErrors(),
+                'new_object_id' => $objId,
+            ]);
         }
 
         $this->error('Failed', [
-            'errors' => null !== $obj ? $obj->getErrors() : [],
-            'soft_errors' => null !== $obj ? $obj->getSoftErrors() : [],
+            'errors' => $obj->getErrors(),
+            'soft_errors' => $obj->getSoftErrors(),
         ]);
-
-        die();
     }
 
     public function next_page()
@@ -96,6 +131,14 @@ class Importer
 
         if (empty($data['nonce']) || !wp_verify_nonce($data['nonce'], 's2wp')) {
             $this->error('Failed to verify the nonce.');
+        }
+
+        if (!current_user_can('manage_options')) {
+            $this->error(__('You are not allowed to do this.', 'import-shopify-to-wp'));
+        }
+
+        if (!isset($data['type']) || !is_string($data['type'])) {
+            $this->error(__('Malformed request.', 'import-shopify-to-wp'));
         }
 
         $type = sanitize_key($data['type']);
@@ -115,6 +158,10 @@ class Importer
     {
         if (empty($_GET['nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['nonce'])), 's2wp')) {
             $this->error('Failed to verify the nonce.');
+        }
+
+        if (!current_user_can('manage_options')) {
+            $this->error(__('You are not allowed to do this.', 'import-shopify-to-wp'));
         }
 
         $fileIds = !empty($_FILES) ? $this->uploadFiles() : [];
@@ -169,6 +216,7 @@ class Importer
         require_once(ABSPATH . 'wp-admin/includes/file.php');
         require_once(ABSPATH . 'wp-admin/includes/media.php');
 
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- the nonce is verified in upload() before this method is called.
         foreach ($_FILES as $fileId => $fileInfo) {
             if (empty($fileInfo['name'])) {
                 continue; // Malformed file info
@@ -198,7 +246,9 @@ class Importer
     {
         global $wp_filesystem;
 
-        WP_Filesystem();
+        if (!WP_Filesystem()) {
+            $this->error(__('Could not initialise the WordPress filesystem.', 'import-shopify-to-wp'));
+        }
 
         $upPath = untrailingslashit(wp_upload_dir()['basedir']) . '/s2wp-data/';
 
@@ -228,7 +278,13 @@ class Importer
             $this->error('Failed to verify the nonce.');
         }
 
-        WP_Filesystem();
+        if (!current_user_can('manage_options')) {
+            $this->error(__('You are not allowed to do this.', 'import-shopify-to-wp'));
+        }
+
+        if (!WP_Filesystem()) {
+            $this->error(__('Could not initialise the WordPress filesystem.', 'import-shopify-to-wp'));
+        }
 
         $upPath = untrailingslashit(wp_upload_dir()['basedir']) . '/s2wp-data/';
 

@@ -4,17 +4,17 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInitcc479ea651a715bb12d50f900a0adda1
+class ComposerStaticInitd329024c57ae219cf7563cf8c101c6a8
 {
     public static $prefixLengthsPsr4 = array (
-        'S' => 
+        'S' =>
         array (
             'S2WPImporter\\' => 13,
         ),
     );
 
     public static $prefixDirsPsr4 = array (
-        'S2WPImporter\\' => 
+        'S2WPImporter\\' =>
         array (
             0 => __DIR__ . '/../..' . '/app',
         ),
@@ -25,6 +25,7 @@ class ComposerStaticInitcc479ea651a715bb12d50f900a0adda1
         'S2WPImporter\\AbstractDB' => __DIR__ . '/../..' . '/app/AbstractDB.php',
         'S2WPImporter\\AdminNotice' => __DIR__ . '/../..' . '/app/AdminNotice.php',
         'S2WPImporter\\AdminPage' => __DIR__ . '/../..' . '/app/AdminPage.php',
+        'S2WPImporter\\Assets' => __DIR__ . '/../..' . '/app/Assets.php',
         'S2WPImporter\\Files' => __DIR__ . '/../..' . '/app/Files.php',
         'S2WPImporter\\IdMapping' => __DIR__ . '/../..' . '/app/IdMapping.php',
         'S2WPImporter\\Image' => __DIR__ . '/../..' . '/app/Image.php',
@@ -49,9 +50,9 @@ class ComposerStaticInitcc479ea651a715bb12d50f900a0adda1
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->prefixLengthsPsr4 = ComposerStaticInitcc479ea651a715bb12d50f900a0adda1::$prefixLengthsPsr4;
-            $loader->prefixDirsPsr4 = ComposerStaticInitcc479ea651a715bb12d50f900a0adda1::$prefixDirsPsr4;
-            $loader->classMap = ComposerStaticInitcc479ea651a715bb12d50f900a0adda1::$classMap;
+            $loader->prefixLengthsPsr4 = ComposerStaticInitd329024c57ae219cf7563cf8c101c6a8::$prefixLengthsPsr4;
+            $loader->prefixDirsPsr4 = ComposerStaticInitd329024c57ae219cf7563cf8c101c6a8::$prefixDirsPsr4;
+            $loader->classMap = ComposerStaticInitd329024c57ae219cf7563cf8c101c6a8::$classMap;
 
         }, null, ClassLoader::class);
     }

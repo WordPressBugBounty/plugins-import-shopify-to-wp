@@ -40,14 +40,27 @@ class AdminPage
     public function enqueue($hook_suffix)
     {
         if ("tools_page_{$this->menu_slug}" === $hook_suffix) {
-            $asset = include S2WP_IMPORTER_DIR . 'js/main.min.asset.php';
+            $asset = Assets::meta(
+                    'build/main.asset.php',
+                    ['lodash', 'react', 'react-dom', 'wp-components', 'wp-element', 'wp-i18n', 'wp-primitives']
+            );
             wp_enqueue_script(
                     's2wp-importer-app-script',
-                    S2WP_IMPORTER_URI . 'js/main.min.js',
+                    S2WP_IMPORTER_URI . 'build/main.js',
                     array_merge($asset['dependencies'], ['wp-api']),
                     $asset['version'],
                     true
             );
+
+            $shopUrl = '';
+
+            if (function_exists('wc_get_page_id')) {
+                $shopPageId = (int) wc_get_page_id('shop');
+
+                if ($shopPageId > 0) {
+                    $shopUrl = (string) get_permalink($shopPageId);
+                }
+            }
 
             wp_localize_script('s2wp-importer-app-script', 'shopify2wp', [
                     'woocommerce_status' => class_exists('WooCommerce') ? 'active' : 'inactive',
@@ -72,16 +85,17 @@ class AdminPage
 
                     'ignoredPlugins' => $this->installedPlugins(),
 
-                    'shopUrl' => function_exists('wc_get_page_id') ? get_permalink( wc_get_page_id( 'shop' ) ) : 0,
+                    'shopUrl' => $shopUrl,
                     'shopAdminUrl' => admin_url( 'admin.php?page=wc-admin' )
             ]);
 
             wp_enqueue_style(
                     's2wp-importer-app-style',
-                    S2WP_IMPORTER_URI . 'css/main.min.css',
+                    S2WP_IMPORTER_URI . 'build/main.css',
                     ['wp-components'],
                     S2WP_IMPORTER_VERSION
             );
+            wp_style_add_data('s2wp-importer-app-style', 'rtl', 'replace');
         }
     }
 

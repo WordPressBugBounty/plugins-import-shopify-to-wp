@@ -10,6 +10,16 @@ namespace S2WPImporter\Plugins;
 class UpgraderSkin extends \WP_Upgrader_Skin {
 
 	/**
+	 * @var string
+	 */
+	public $type = '';
+
+	/**
+	 * @var array|object
+	 */
+	public $api = [];
+
+	/**
 	 * Constructor
 	 *
 	 * @param array $args

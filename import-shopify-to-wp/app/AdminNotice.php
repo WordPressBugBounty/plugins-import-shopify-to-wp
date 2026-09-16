@@ -12,10 +12,10 @@ class AdminNotice
 
     public function enqueue()
     {
-        $asset = include S2WP_IMPORTER_DIR . 'js/notice.min.asset.php';
+        $asset = Assets::meta('build/notice.asset.php');
         wp_enqueue_script(
                 's2wp-importer-notice-script',
-                S2WP_IMPORTER_URI . 'js/notice.min.js',
+                S2WP_IMPORTER_URI . 'build/notice.js',
                 $asset['dependencies'],
                 $asset['version'],
                 true

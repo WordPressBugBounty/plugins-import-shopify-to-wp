@@ -47,8 +47,8 @@ class VariationsLog extends AbstractDB
 			id bigint(20) NOT NULL AUTO_INCREMENT,
 			old_id bigint(20) NOT NULL,
 			new_id bigint(20) NOT NULL,
-			PRIMARY KEY (id)
-			) CHARACTER SET utf8 COLLATE utf8_general_ci;";
+			PRIMARY KEY  (id)
+			) {$this->db->get_charset_collate()};";
 
         dbDelta($sql);
     }

@@ -30,14 +30,29 @@ class Image
 
         $http = new WP_Http();
         $response = $http->request($url);
-        if ((int)$response['response']['code'] !== 200) {
-            $this->addSoftError('Failed to download the image. Response code is not valid: ' . $response['response']['code']);
+
+        if (is_wp_error($response)) {
+            $this->addSoftError($response->get_error_message());
 
             return false;
         }
 
+        $responseCode = (int) wp_remote_retrieve_response_code($response);
+
+        if ($responseCode !== 200) {
+            $this->addSoftError('Failed to download the image. Response code is not valid: ' . $responseCode);
+
+            return false;
+        }
+
+        $file_base_name = basename((string) wp_parse_url($url, PHP_URL_PATH));
+
+        if ('' === $file_base_name) {
+            $file_base_name = 'shopify-image-' . md5($url);
+        }
+
         $upload = wp_upload_bits(
-            basename(parse_url($url, PHP_URL_PATH)),
+            $file_base_name,
             null,
             $response['body']
         );

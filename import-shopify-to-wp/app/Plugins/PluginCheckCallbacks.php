@@ -35,6 +35,10 @@ class PluginCheckCallbacks
             },
         ];
 
+        if (!is_string($slug) || !isset($cb[$slug])) {
+            return null;
+        }
+
         return $cb[$slug];
     }
 }

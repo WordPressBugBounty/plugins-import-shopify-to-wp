@@ -104,6 +104,11 @@ class Product extends AbstractRecord implements IRecord
     {
         $this->addVariants();
         $this->addImages();
+
+        if ($this->product instanceof \WC_Product_Variable && !empty($this->variationIds->getAll())) {
+            \WC_Product_Variable::sync($this->product->get_id());
+            wc_delete_product_transients($this->product->get_id());
+        }
     }
 
     /*
@@ -258,9 +263,9 @@ class Product extends AbstractRecord implements IRecord
     {
         $attribute = new WC_Product_Attribute();
         $attribute->set_id(0);
-        $attribute->set_name(wc_sanitize_term_text_based($option['name']));
-        $attribute->set_options(is_array($option['values']) ? array_map('wc_sanitize_term_text_based', $option['values']) : []);
-        $attribute->set_position((int)$option['position']);
+        $attribute->set_name(wc_sanitize_term_text_based((string) ($option['name'] ?? '')));
+        $attribute->set_options(!empty($option['values']) && is_array($option['values']) ? array_map('wc_sanitize_term_text_based', $option['values']) : []);
+        $attribute->set_position((int) ($option['position'] ?? 0));
         $attribute->set_visible(1);
         $attribute->set_variation(1);
 
@@ -307,7 +312,7 @@ class Product extends AbstractRecord implements IRecord
                 $prop = 'option' . ($key + 1);
 
                 if (!empty($variant[$prop])) {
-                    $attributes[sanitize_title($option['name'])] = $variant[$prop];
+                    $attributes[sanitize_title((string) ($option['name'] ?? ''))] = $variant[$prop];
                 }
             }
         }
@@ -316,14 +321,14 @@ class Product extends AbstractRecord implements IRecord
             $variation->set_attributes($attributes);
         }
 
-        if (!empty($this->item['weight']) && (float)$this->item['weight'] > 0) {
-            $variation->set_weight((float)$this->item['weight']);
+        if (!empty($variant['weight']) && (float)$variant['weight'] > 0) {
+            $variation->set_weight((float)$variant['weight']);
         }
 
         // Managing inventory
-        if (!empty($this->item['inventory_management'])) {
+        if (!empty($variant['inventory_management'])) {
             $variation->set_manage_stock(true);
-            $variation->set_stock_quantity((int)$this->item['inventory_quantity']);
+            $variation->set_stock_quantity((int)$variant['inventory_quantity']);
         }
 
         $variation->save();

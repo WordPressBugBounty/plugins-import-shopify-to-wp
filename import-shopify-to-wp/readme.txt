@@ -2,10 +2,10 @@
 Contributors: _smartik_, smub
 Donate link: https://shopifytowp.com
 Tags: shopify, woocommerce, export, import, free
-Requires at least: 5.6
-Tested up to: 6.4
-Requires PHP: 7.1
-Stable tag: 1.0.1
+Requires at least: 6.2
+Tested up to: 7.1
+Requires PHP: 7.4
+Stable tag: 1.1.0
 Text Domain: import-shopify-to-wp
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -101,6 +101,19 @@ Yes.
 4. Completion
 
 == Changelog ==
+= 1.1.0 =
+* Fixed: The importer page crashed on PHP 8 with an "array_merge()" error.
+* Fixed: Product variations did not receive their weight and stock quantity from Shopify.
+* Fixed: Imported variable products showed no price and appeared out of stock until re-saved.
+* Fixed: Refunded orders were recorded incorrectly. Refunds are now created as proper WooCommerce refunds, and partially refunded orders keep their paid status with the refunded amount attached.
+* Fixed: Orders without a shipping address (for example digital orders) produced warnings during import.
+* Fixed: Customers without an email address stopped the import with an error page. They are now skipped with a clear message.
+* Fixed: A failed image download could interrupt the import.
+* Improved: Compatible with PHP 7.4 through 8.5 and tested with WordPress 7.1 and WooCommerce 11.
+* Improved: Compatible with WooCommerce High-Performance Order Storage (HPOS).
+* Improved: Security hardening of the import requests.
+* Requires PHP 7.4 and WordPress 6.2 or newer.
+
 = 1.0.1 =
 * Bug fix: The variations are not assigned to the main product if the variation/attribution title contains non-english characters.
 

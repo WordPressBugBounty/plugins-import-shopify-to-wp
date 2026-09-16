@@ -4,7 +4,6 @@ namespace S2WPImporter\Process;
 
 use S2WPImporter\VariationsLog;
 use WC_Order;
-use WC_Order_Refund;
 
 class Order extends AbstractRecord implements IRecord
 {
@@ -424,7 +423,7 @@ class Order extends AbstractRecord implements IRecord
         'authorized' => 'on-hold', // The payments have been authorized.
         'partially_paid' => 'on-hold', // The order has been partially paid.
         'paid' => 'processing',// The payments have been paid.
-        'partially_refunded' => 'refunded', // The payments have been partially refunded.
+        'partially_refunded' => 'processing', // Partially refunded: the order stays paid, the refunded part is recorded as a WC refund in afterSave().
         'refunded' => 'refunded', // The payments have been refunded.
         'voided' => 'cancelled', // The payments have been voided.
     ];
@@ -509,13 +508,13 @@ class Order extends AbstractRecord implements IRecord
             sprintf(
             /* translators: %s original Shopify order number. */
                 __('Imported from Shopify where the order number was #%1$s', 'import-shopify-to-wp'),
-                $this->item['order_number']
+                $this->item['order_number'] ?? ''
             )
         );
 
         // Mark as completed if needed is fulfilled on Shopify
         // ----------------------------------------------------------------------------
-        if ($this->item['financial_status'] === 'paid' && $this->item['fulfillment_status'] === 'fulfilled') {
+        if (($this->item['financial_status'] ?? '') === 'paid' && ($this->item['fulfillment_status'] ?? '') === 'fulfilled') {
             $normalOrder->set_status('completed');
         }
 
@@ -554,18 +553,54 @@ class Order extends AbstractRecord implements IRecord
 
         // Refunded Order Modifications
         // ----------------------------------------------------------------------------
-        if (!empty($this->item['refunds']) || $this->item['financial_status'] === 'refunded') {
-            $refundedOrder = new WC_Order_Refund($orderId);
+        $financialStatus = $this->item['financial_status'] ?? '';
+        $refunds = !empty($this->item['refunds']) && is_array($this->item['refunds']) ? $this->item['refunds'] : [];
 
-            try {
-                $refundedOrder->set_reason(
-                    !empty($i['refunds'][0]['note']) ? sanitize_text_field($i['refunds'][0]['note']) : __('Unknown refund reason', 'import-shopify-to-wp')
-                );
+        if (!empty($refunds) || 'refunded' === $financialStatus) {
+            $amount = 0.0;
 
-                $refundedOrder->save();
+            foreach ($refunds as $refund) {
+                foreach ((array) ($refund['transactions'] ?? []) as $transaction) {
+                    if (('refund' === ($transaction['kind'] ?? '')) && ('success' === ($transaction['status'] ?? ''))) {
+                        $amount += (float) ($transaction['amount'] ?? 0);
+                    }
+                }
             }
-            catch (\WC_Data_Exception $e) {
-                $this->addError($e->getMessage());
+
+            if ($amount <= 0 && 'refunded' === $financialStatus) {
+                $amount = (float) $normalOrder->get_total();
+            }
+
+            $note = !empty($refunds[0]['note']) ? sanitize_text_field($refunds[0]['note']) : __('Unknown refund reason', 'import-shopify-to-wp');
+            $remaining = (float) $normalOrder->get_total() - (float) $normalOrder->get_total_refunded();
+
+            if ($amount > 0 && $remaining > 0) {
+                $result = wc_create_refund([
+                        'order_id' => $orderId,
+                        'amount' => wc_format_decimal(min($amount, $remaining)),
+                        'reason' => $note,
+                        'refund_payment' => false,
+                        'restock_items' => false,
+                ]);
+
+                if (is_wp_error($result)) {
+                    $this->addError($result->get_error_message());
+                }
+            }
+            else {
+                // WooCommerce already refunded the order in full when its status became
+                // "refunded" (wc_order_fully_refunded), so only carry the Shopify note over.
+                $existing = $normalOrder->get_refunds();
+
+                if (!empty($existing) && $existing[0] instanceof \WC_Order_Refund) {
+                    try {
+                        $existing[0]->set_reason($note);
+                        $existing[0]->save();
+                    }
+                    catch (\WC_Data_Exception $e) {
+                        $this->addSoftError($e->getMessage());
+                    }
+                }
             }
         }
     }
@@ -577,30 +612,38 @@ class Order extends AbstractRecord implements IRecord
     */
     protected function setStatus()
     {
-        if (isset(self::STATUSES_MAP[$this->item['financial_status']])) {
-            $this->order->set_status(self::STATUSES_MAP[$this->item['financial_status']]);
+        $fs = $this->item['financial_status'] ?? '';
+
+        if (isset(self::STATUSES_MAP[$fs])) {
+            $this->order->set_status(self::STATUSES_MAP[$fs]);
         }
     }
 
     protected function setAddress($type)
     {
-        $this->order->{"set_{$type}_first_name"}(sanitize_text_field($this->item["{$type}_address"]['first_name']) ?? null);
-        $this->order->{"set_{$type}_last_name"}(sanitize_text_field($this->item["{$type}_address"]['last_name']) ?? null);
+        $address = $this->item["{$type}_address"] ?? null;
 
-        $this->order->{"set_{$type}_company"}(sanitize_text_field($this->item["{$type}_address"]['company']) ?? null);
+        if (!is_array($address)) {
+            return;
+        }
 
-        $this->order->{"set_{$type}_address_1"}(sanitize_text_field($this->item["{$type}_address"]['address1']) ?? null);
-        $this->order->{"set_{$type}_address_2"}(sanitize_text_field($this->item["{$type}_address"]['address2']) ?? null);
+        $this->order->{"set_{$type}_first_name"}(sanitize_text_field($address['first_name'] ?? ''));
+        $this->order->{"set_{$type}_last_name"}(sanitize_text_field($address['last_name'] ?? ''));
 
-        $this->order->{"set_{$type}_country"}(sanitize_text_field($this->item["{$type}_address"]['country_code']) ?? null);
-        $this->order->{"set_{$type}_state"}(sanitize_text_field($this->item["{$type}_address"]['province']) ?? null);
-        $this->order->{"set_{$type}_city"}(sanitize_text_field($this->item["{$type}_address"]['city']) ?? null);
-        $this->order->{"set_{$type}_postcode"}(sanitize_text_field($this->item["{$type}_address"]['zip']) ?? null);
+        $this->order->{"set_{$type}_company"}(sanitize_text_field($address['company'] ?? ''));
+
+        $this->order->{"set_{$type}_address_1"}(sanitize_text_field($address['address1'] ?? ''));
+        $this->order->{"set_{$type}_address_2"}(sanitize_text_field($address['address2'] ?? ''));
+
+        $this->order->{"set_{$type}_country"}(sanitize_text_field($address['country_code'] ?? ''));
+        $this->order->{"set_{$type}_state"}(sanitize_text_field($address['province'] ?? ''));
+        $this->order->{"set_{$type}_city"}(sanitize_text_field($address['city'] ?? ''));
+        $this->order->{"set_{$type}_postcode"}(sanitize_text_field($address['zip'] ?? ''));
 
         if ($type === 'billing') {
-            $this->order->{"set_{$type}_phone"}(sanitize_text_field($this->item["{$type}_address"]['phone']) ?? null);
+            $this->order->{"set_{$type}_phone"}(sanitize_text_field($address['phone'] ?? ''));
 
-            $billingEmail = $this->item["{$type}_address"]['email'] ?? ($this->item['contact_email'] ?? null);
+            $billingEmail = $address['email'] ?? ($this->item['contact_email'] ?? null);
 
             if (!empty($billingEmail)) {
                 $this->order->{"set_{$type}_email"}(sanitize_email($billingEmail));

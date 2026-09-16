@@ -113,8 +113,8 @@ class Customer extends AbstractRecord implements IRecord
 
     public function parse()
     {
-        $this->customer->set_email(sanitize_email($this->item['email']));
-        $this->customer->set_billing_email(sanitize_email($this->item['email']));
+        $this->customer->set_email(sanitize_email((string) ($this->item['email'] ?? '')));
+        $this->customer->set_billing_email(sanitize_email((string) ($this->item['email'] ?? '')));
 
         $this->customer->set_first_name(sanitize_text_field($this->item['first_name']));
         $this->customer->set_last_name(sanitize_text_field($this->item['last_name']));
@@ -165,24 +165,28 @@ class Customer extends AbstractRecord implements IRecord
      */
     protected function setAddress($type, $data)
     {
-        $this->customer->{"set_{$type}_first_name"}(sanitize_text_field($data['first_name']) ?? null);
-        $this->customer->{"set_{$type}_last_name"}(sanitize_text_field($data['last_name']) ?? null);
-
-        if ($type === 'shipping') {
-            $this->customer->{"set_{$type}_company"}(sanitize_text_field($data['company']) ?? null);
+        if (!is_array($data)) {
+            return;
         }
 
-        $this->customer->{"set_{$type}_address"}(sanitize_text_field($data['address1']) ?? null);
-        $this->customer->{"set_{$type}_address_2"}(sanitize_text_field($data['address2']) ?? null);
+        $this->customer->{"set_{$type}_first_name"}(sanitize_text_field($data['first_name'] ?? ''));
+        $this->customer->{"set_{$type}_last_name"}(sanitize_text_field($data['last_name'] ?? ''));
 
-        $this->customer->{"set_{$type}_country"}(sanitize_text_field($data['country_code']) ?? null);
-        $this->customer->{"set_{$type}_state"}(sanitize_text_field($data['province']) ?? null);
-        $this->customer->{"set_{$type}_city"}(sanitize_text_field($data['city']) ?? null);
-        $this->customer->{"set_{$type}_postcode"}(sanitize_text_field($data['zip']) ?? null);
+        if ($type === 'shipping') {
+            $this->customer->{"set_{$type}_company"}(sanitize_text_field($data['company'] ?? ''));
+        }
+
+        $this->customer->{"set_{$type}_address"}(sanitize_text_field($data['address1'] ?? ''));
+        $this->customer->{"set_{$type}_address_2"}(sanitize_text_field($data['address2'] ?? ''));
+
+        $this->customer->{"set_{$type}_country"}(sanitize_text_field($data['country_code'] ?? ''));
+        $this->customer->{"set_{$type}_state"}(sanitize_text_field($data['province'] ?? ''));
+        $this->customer->{"set_{$type}_city"}(sanitize_text_field($data['city'] ?? ''));
+        $this->customer->{"set_{$type}_postcode"}(sanitize_text_field($data['zip'] ?? ''));
 
         if ($type === 'billing') {
-            $this->customer->{"set_{$type}_phone"}(sanitize_text_field($data['phone']) ?? null);
-            $this->customer->{"set_{$type}_email"}(sanitize_email($this->item['email']) ?? null);
+            $this->customer->{"set_{$type}_phone"}(sanitize_text_field($data['phone'] ?? ''));
+            $this->customer->{"set_{$type}_email"}(sanitize_email((string) ($this->item['email'] ?? '')));
         }
     }
 

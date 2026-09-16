@@ -90,6 +90,7 @@ class Plugin
         $api = plugins_api('plugin_information', ['slug' => $this->slug, 'fields' => ['sections' => false]]);
 
         if (is_wp_error($api)) {
+            /* translators: %s: error message returned by the wordpress.org plugins API. */
             return sprintf(__('ERROR: Error fetching plugin information: %s', 'import-shopify-to-wp'), $api->get_error_message());
         }
 
@@ -113,6 +114,7 @@ class Plugin
                 $error_message = $install_result->get_error_message();
             }
 
+            /* translators: %s: error message returned by the plugin installer. */
             return sprintf(__('ERROR: Failed to install plugin: %s', 'import-shopify-to-wp'), $error_message);
         }
 
@@ -135,6 +137,7 @@ class Plugin
         $activate_result = activate_plugin($this->getFilePath(), '', false, true);
 
         if (is_wp_error($activate_result)) {
+            /* translators: %s: error message returned when activating the plugin. */
             return sprintf(__('ERROR: Failed to activate plugin: %s', 'import-shopify-to-wp'), $activate_result->get_error_message());
         }
 
@@ -169,7 +172,7 @@ class Plugin
      */
     public function getFilePath()
     {
-        $php_files = glob(WP_PLUGIN_DIR . '/' . $this->slug . '/*.php');
+        $php_files = glob(WP_PLUGIN_DIR . '/' . $this->slug . '/*.php') ?: [];
 
         $the_file_path = false;
         foreach ($php_files as $file) {
@@ -195,7 +198,7 @@ class Plugin
 
         if (is_multisite()) {
             $sitewide = get_site_option('active_sitewide_plugins', []);
-            $active = array_unique(array_merge($active, $sitewide));
+            $active = array_unique(array_merge($active, array_keys((array) $sitewide)));
         }
 
         $slugs = [];
